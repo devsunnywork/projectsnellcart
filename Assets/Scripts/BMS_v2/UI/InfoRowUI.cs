@@ -3,6 +3,10 @@ using TMPro;
 
 namespace BMS_v2
 {
+    /// <summary>
+    /// UI component representing a single row of label-value data in the Asset Detail panel.
+    /// Allows toggling an input field to edit the value.
+    /// </summary>
     public class InfoRowUI : MonoBehaviour
     {
         public TextMeshProUGUI labelText;

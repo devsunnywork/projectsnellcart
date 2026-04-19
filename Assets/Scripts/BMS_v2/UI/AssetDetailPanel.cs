@@ -6,6 +6,10 @@ using System.IO;
 
 namespace BMS_v2
 {
+    /// <summary>
+    /// Controls the dynamic Right Panel UI that displays detailed info for the currently selected
+    /// building, floor, room, or asset. Supports editing data and saving it back to the JSON store.
+    /// </summary>
     public class AssetDetailPanel : MonoBehaviour
     {
         [Header("Prefabs")]
@@ -43,6 +47,37 @@ namespace BMS_v2
             bool wasActive = tabToToggle.activeSelf;
             foreach (var tab in allTabs) { if (tab != null) tab.SetActive(false); }
             if (!wasActive && tabToToggle != null) { tabToToggle.SetActive(true); }
+        }
+
+        public void ClearExistingRows()
+        {
+            foreach (var row in activeRows)
+            {
+                if (row != null) Destroy(row.gameObject);
+            }
+            activeRows.Clear();
+        }
+
+        public void ShowOutsideWarning(string assetId)
+        {
+            gameObject.SetActive(true);
+            ClearExistingRows();
+            
+            if (headerTitleText != null) {
+                headerTitleText.text = "NOT ACCESSIBLE";
+                headerTitleText.color = new Color(1f, 0.4f, 0.4f);
+            }
+            if (headerSubtitleText != null) headerSubtitleText.text = assetId;
+
+            SetTabTitle(identityTabContent, "NAVIGATION");
+            AddRow(identityTabContent, "STATUS", "STATIONARY ASSET");
+            AddRow(identityTabContent, "NOTICE", "PLEASE GO INSIDE THE BUILDING TO VIEW THIS ASSET", null);
+            
+            // Hide other tabs
+            if (allTabs != null) {
+                foreach(var t in allTabs) if(t != null) t.SetActive(false);
+                if(allTabs.Length > 0 && allTabs[0] != null) allTabs[0].SetActive(true);
+            }
         }
 
         public void ShowAsset(string id)
@@ -407,15 +442,6 @@ namespace BMS_v2
             if (dashboard != null) dashboard.BindDashboardData();
         }
 
-        private void ClearExistingRows()
-        {
-            foreach (var row in activeRows)
-            {
-                if (row != null) Destroy(row.gameObject);
-            }
-            activeRows.Clear();
-        }
-
         private void PopulateHeader(AssetData data)
         {
             if (data.identity != null)
@@ -489,7 +515,12 @@ namespace BMS_v2
                 {
                     foreach (var t in data.tasks)
                     {
-                        string header = $"[{t.priority.ToUpper()}] {t.task_type}";
+                        string pStr = t.priority.ToUpper();
+                        string romanPrio = "III";
+                        if (pStr == "HIGH" || pStr == "ULTRA" || pStr == "URGENT") romanPrio = "I";
+                        else if (pStr == "MEDIUM") romanPrio = "II";
+
+                        string header = $"[{romanPrio}] {t.task_type}";
                         string scheduleStr = (t.schedule != null && !string.IsNullOrEmpty(t.schedule.start_date)) ? t.schedule.start_date : "No Date";
                         string workerStr = (t.worker != null && !string.IsNullOrEmpty(t.worker.name)) ? t.worker.name : "Unassigned";
                         

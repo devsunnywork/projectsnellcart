@@ -5,6 +5,11 @@ using UnityEngine.UI;
 
 namespace BMS_v2
 {
+    /// <summary>
+    /// Controls the Enterprise Asset Report (Data Summary) overlay. 
+    /// Dynamically populates a full-screen vertical table showing a comprehensive inventory 
+    /// breakdown and cost sum for the currently selected building or area.
+    /// </summary>
     public class SummaryManager : MonoBehaviour
     {
         public static SummaryManager Instance;
@@ -24,10 +29,6 @@ namespace BMS_v2
             if (Instance == null) Instance = this;
             summaryPanel.SetActive(false);
             if (closeBtn != null) closeBtn.onClick.AddListener(CloseSummary);
-
-            
-            RectTransform rt = summaryPanel.GetComponent<RectTransform>();
-            if (rt != null) rt.sizeDelta = new Vector2(1400, 450);
         }
 
         public void OpenSummary()
@@ -40,6 +41,14 @@ namespace BMS_v2
             LastSelectedId = selectedId;
             summaryPanel.SetActive(true);
             PopulateVerticalTable(selectedId);
+            
+            Canvas.ForceUpdateCanvases();
+            ScrollRect sr = summaryPanel.GetComponentInChildren<ScrollRect>();
+            if (sr != null)
+            {
+                sr.verticalNormalizedPosition = 1f;
+                LayoutRebuilder.ForceRebuildLayoutImmediate(sr.content);
+            }
         }
 
         public void CloseSummary()
@@ -51,151 +60,189 @@ namespace BMS_v2
         {
             foreach (Transform child in tableContent) Destroy(child.gameObject);
 
-            titleText.text = "TECHNICAL REPORT: " + id;
-            titleText.fontSize = 32;
-
-            
-            string[] headers = { "S.N", "Bld. N", "Bld. ID", "Loc", "Des", "Qty", "Prio", "Cost", "Start", "End", "Remark" };
-            AddTableRow(headers, true);
-
-            
-            string sno = "SN-01", bldName = "Main Complex", bldId = "BLD-001", loc = "Heritage Zone", desc = "Main Structure", qty = "1";
-            string priority = "NORMAL", cost = "Rs. 0", startD = "2024-01-01", endD = "2025-01-01", remark = "Optimal Condition";
-
-            if (id.StartsWith("BLD_"))
+            string buildingId = "BLD_001";
+            if (!string.IsNullOrEmpty(id))
             {
-                BuildingDocument doc = DataStore.Instance.GetBuilding(id);
-                if (doc != null)
-                {
-                    sno = "PRIMARY-01";
-                    bldName = !string.IsNullOrEmpty(doc.building_name) ? doc.building_name : "Temple Complex";
-                    bldId = doc.building_id;
-                    loc = !string.IsNullOrEmpty(doc.address) ? doc.address : "Main Entrance Gate";
-                    desc = !string.IsNullOrEmpty(doc.description) ? doc.description : "Main Spiritual Centre Structure";
-                    qty = doc.total_floors + " Floors / " + doc.total_area_sqm + " Sqm";
-                    
-                    int assetCount = 0; float totalVal = 0;
-                    List<AssetData> allAssets = DataStore.Instance.GetAllAssets();
-                    foreach(var a in allAssets) if(a.location.building_id == id) { assetCount++; if(a.cost != null) totalVal += a.cost.total_invested; }
-                    remark = $"Registered Assets: {assetCount}";
-                    cost = $"Rs {totalVal:N0}";
-                    startD = "2022-01-01"; endD = "2032-12-31"; 
-                }
-            }
-            else if (DataStore.Instance.GetAsset(id) != null)
-            {
-                AssetData asset = DataStore.Instance.GetAsset(id);
-                sno = !string.IsNullOrEmpty(asset.identity.serial_number) ? asset.identity.serial_number : "SR-" + asset.id.Split('_')[asset.id.Split('_').Length - 1];
-                bldName = DataStore.Instance.GetBuilding(asset.location.building_id)?.building_name ?? "Divine Complex";
-                bldId = asset.location.building_id;
-                loc = $"{asset.location.floor_id}/{asset.location.room_id}";
-                desc = !string.IsNullOrEmpty(asset.identity.name) ? asset.identity.name : "Facility Asset";
-                
-                int sceneCount = 0;
-                ThinAssetInfo[] allSceneAssets = Object.FindObjectsByType<ThinAssetInfo>(FindObjectsSortMode.None);
-                foreach(var sai in allSceneAssets) if(sai.assetId == asset.id) sceneCount++;
-                if(sceneCount == 0) sceneCount = asset.identity.quantity > 0 ? asset.identity.quantity : 1;
-                qty = sceneCount.ToString();
-
-                startD = !string.IsNullOrEmpty(asset.lifecycle.purchase_date) ? asset.lifecycle.purchase_date : "2024-01-15";
-                endD = !string.IsNullOrEmpty(asset.lifecycle.retirement_date) ? asset.lifecycle.retirement_date : "2029-01-15";
-
-                if (asset.tasks != null && asset.tasks.Count > 0)
-                {
-                    var t = asset.tasks[0];
-                    priority = t.priority.ToUpper();
-                    cost = $"Rs {t.cost_breakdown.total_task_cost:N0}";
-                    startD = !string.IsNullOrEmpty(t.schedule.start_date) ? t.schedule.start_date : startD;
-                    endD = !string.IsNullOrEmpty(t.schedule.completion_date) ? t.schedule.completion_date : "2024-12-30";
-                    remark = !string.IsNullOrEmpty(t.description) ? t.description : "No pending issues";
-                }
+                if (id.StartsWith("BLD_")) buildingId = id;
                 else
                 {
-                    remark = "Maintenance Up-to-date";
+                    AssetData asset = DataStore.Instance.GetAsset(id);
+                    if (asset != null) buildingId = asset.location.building_id;
                 }
             }
-            else if (id.StartsWith("FLR_") || id.StartsWith("RM_"))
+
+            BuildingDocument doc = DataStore.Instance.GetBuilding(buildingId);
+            titleText.text = "ENTERPRISE ASSET REPORT  —  " + (doc != null ? doc.building_name.ToUpper() : buildingId);
+            titleText.fontSize = 22;
+            titleText.fontStyle = FontStyles.Bold;
+            titleText.color = new Color(1f, 0.88f, 0.25f);
+            titleText.characterSpacing = 2f;
+
+            string[] headers = { "S.N", "ASSET ID", "NAME", "LOCATION", "DESCRIPTION", "QTY", "PRIORITY", "MAINT. COST", "REPAIR COST" };
+            AddTableRow(headers, true, 0);
+
+            List<AssetData> allAssets = DataStore.Instance.GetAllAssets();
+            List<AssetData> buildingAssets = new List<AssetData>();
+            foreach (var a in allAssets)
             {
-                sno = id.StartsWith("FLR_") ? "FLR-STAT-01" : "RM-STAT-01";
-                List<AssetData> assets = new List<AssetData>();
-                List<AssetData> all = DataStore.Instance.GetAllAssets();
-                foreach(var a in all) {
-                    if(id.StartsWith("FLR_") && a.location.floor_id == id) assets.Add(a);
-                    else if(id.StartsWith("RM_") && a.location.room_id == id) assets.Add(a);
-                }
-
-                if(assets.Count > 0) {
-                    bldName = DataStore.Instance.GetBuilding(assets[0].location.building_id)?.building_name ?? "Main Temple";
-                    bldId = assets[0].location.building_id;
-                }
-                loc = id;
-                desc = id.StartsWith("FLR_") ? "Tier-Level Statistics" : "Room Inventory Overview";
-                
-                float totalVal = 0; string maxP = "NORMAL";
-                foreach(var a in assets) {
-                    if(a.cost != null) totalVal += a.cost.total_invested;
-                    if(a.tasks != null && a.tasks.Count > 0 && a.tasks[0].priority == "high") maxP = "ULTRA";
-                }
-                qty = assets.Count + " Items";
-                cost = $"Rs {totalVal:N0}";
-                priority = maxP;
-                remark = "System Metrics Synced";
-                startD = "2024-01-01"; endD = "2024-12-31";
+                if (a.location.building_id == buildingId) buildingAssets.Add(a);
             }
 
-            AddTableRow(new string[] { sno, bldName, bldId, loc, desc, qty, priority, cost, startD, endD, remark }, false);
+            int index = 1;
+            foreach (var asset in buildingAssets)
+            {
+                string sno = index.ToString("D2");
+                string aid = asset.id;
+                string name = asset.identity.name;
+                string loc = $"{asset.location.floor_id}/{asset.location.room_id}";
+                string desc = !string.IsNullOrEmpty(asset.identity.category) ? asset.identity.category : "Asset Item";
+                string qty = asset.identity.quantity.ToString();
+                
+                string priority = "III";
+                float repairCost = 0;
+                if (asset.tasks != null && asset.tasks.Count > 0)
+                {
+                    string rawPrio = asset.tasks[0].priority.ToUpper();
+                    if (rawPrio == "HIGH" || rawPrio == "ULTRA") priority = "I";
+                    else if (rawPrio == "MEDIUM") priority = "II";
+                    else priority = "III";
+                    foreach(var t in asset.tasks) repairCost += t.cost_breakdown.total_task_cost;
+                }
+
+                float maintenanceCost = asset.cost != null ? asset.cost.purchase_cost : 0;
+
+                string mCostStr = $"Rs {maintenanceCost:N0}";
+                string rCostStr = $"Rs {repairCost:N0}";
+
+                AddTableRow(new string[] { sno, aid, name, loc, desc, qty, priority, mCostStr, rCostStr }, false, index);
+                index++;
+            }
+
+            // Add bottom summary row
+            AddSummaryFooter(buildingAssets);
         }
 
-        private void AddTableRow(string[] values, bool isHeader)
+        private void AddSummaryFooter(List<AssetData> assets)
         {
-            GameObject row = new GameObject(isHeader ? "HeaderRow" : "DataRow");
+            float totalMaint = 0, totalRepair = 0;
+            int totalQty = 0;
+            foreach (var a in assets)
+            {
+                totalQty += a.identity.quantity;
+                if (a.cost != null) totalMaint += a.cost.purchase_cost;
+                if (a.tasks != null)
+                    foreach (var t in a.tasks) totalRepair += t.cost_breakdown.total_task_cost;
+            }
+
+            GameObject footer = new GameObject("FooterRow");
+            footer.transform.SetParent(tableContent, false);
+
+            Image bg = footer.AddComponent<Image>();
+            bg.color = new Color(0.08f, 0.18f, 0.12f, 0.95f);
+            footer.AddComponent<LayoutElement>().minHeight = 55;
+
+            HorizontalLayoutGroup hlg = footer.AddComponent<HorizontalLayoutGroup>();
+            hlg.padding = new RectOffset(25, 25, 8, 8);
+            hlg.spacing = 10;
+            hlg.childControlWidth = true; hlg.childControlHeight = true; hlg.childForceExpandWidth = false;
+            hlg.childAlignment = TextAnchor.MiddleLeft;
+
+            string[] footerVals = { "", "", "", "", "TOTAL", totalQty.ToString(), "", $"Rs {totalMaint:N0}", $"Rs {totalRepair:N0}" };
+            for (int i = 0; i < footerVals.Length; i++)
+            {
+                TextMeshProUGUI cell = CreateCell(footer.transform, footerVals[i], true);
+                cell.fontSize = 17;
+                cell.color = new Color(0.3f, 1f, 0.5f);
+                cell.alignment = TextAlignmentOptions.Left;
+                cell.enableWordWrapping = false;
+
+                LayoutElement le = cell.gameObject.AddComponent<LayoutElement>();
+                switch (i)
+                {
+                    case 0: le.minWidth = 45; le.preferredWidth = 55; break;
+                    case 1: le.minWidth = 160; le.flexibleWidth = 1; break;
+                    case 2: le.minWidth = 180; le.flexibleWidth = 1.5f; break;
+                    case 3: le.minWidth = 160; le.flexibleWidth = 1; break;
+                    case 4: le.minWidth = 180; le.flexibleWidth = 1.5f; break;
+                    case 5: le.minWidth = 45; le.preferredWidth = 55; break;
+                    case 6: le.minWidth = 90; le.flexibleWidth = 0.7f; break;
+                    case 7: le.minWidth = 120; le.flexibleWidth = 0.8f; break;
+                    case 8: le.minWidth = 120; le.flexibleWidth = 0.8f; break;
+                }
+            }
+        }
+
+        private void AddTableRow(string[] values, bool isHeader, int rowIndex)
+        {
+            GameObject row = new GameObject(isHeader ? "HeaderRow" : $"DataRow_{rowIndex}");
             row.transform.SetParent(tableContent, false);
             
+            Image bg = row.AddComponent<Image>();
             if (isHeader)
             {
-                Image bg = row.AddComponent<Image>();
-                bg.color = new Color(0.12f, 0.22f, 0.45f, 0.95f);
-                row.AddComponent<LayoutElement>().minHeight = 60;
+                bg.color = new Color(0.06f, 0.12f, 0.22f, 0.98f);
+                row.AddComponent<LayoutElement>().minHeight = 55;
             }
             else
             {
-                GameObject line = new GameObject("Line");
-                line.transform.SetParent(row.transform, false);
-                line.AddComponent<Image>().color = new Color(1, 1, 1, 0.2f);
-                RectTransform rtL = line.GetComponent<RectTransform>();
-                rtL.anchorMin = new Vector2(0,0); rtL.anchorMax = new Vector2(1,0); 
-                rtL.sizeDelta = new Vector2(0, 2); rtL.anchoredPosition = Vector2.zero;
+                bool isEven = rowIndex % 2 == 0;
+                bg.color = isEven 
+                    ? new Color(0.04f, 0.05f, 0.08f, 0.85f) 
+                    : new Color(0.07f, 0.08f, 0.12f, 0.85f);
+                row.AddComponent<LayoutElement>().minHeight = 50;
             }
 
             HorizontalLayoutGroup hlg = row.AddComponent<HorizontalLayoutGroup>();
-            hlg.padding = new RectOffset(20, 20, 15, 15);
-            hlg.spacing = 20;
-            hlg.childControlWidth = true; hlg.childControlHeight = true; hlg.childForceExpandWidth = true;
+            hlg.padding = new RectOffset(25, 25, 6, 6);
+            hlg.spacing = 10;
+            hlg.childControlWidth = true; hlg.childControlHeight = true; hlg.childForceExpandWidth = false;
             hlg.childAlignment = TextAnchor.MiddleLeft;
 
             for (int i = 0; i < values.Length; i++)
             {
                 TextMeshProUGUI cell = CreateCell(row.transform, values[i], isHeader);
-                cell.fontSize = isHeader ? 20 : 18; 
-                cell.color = isHeader ? new Color(0.8f, 0.95f, 1.0f) : Color.white;
+                cell.fontSize = isHeader ? 18 : 17; 
+                cell.characterSpacing = isHeader ? 1.5f : 0.3f;
                 cell.alignment = TextAlignmentOptions.Left;
-                cell.enableWordWrapping = true; 
-                cell.overflowMode = TextOverflowModes.Overflow; 
+                cell.enableWordWrapping = false; 
+                cell.overflowMode = TextOverflowModes.Ellipsis; 
+
+                if (isHeader)
+                {
+                    cell.color = new Color(0.45f, 0.85f, 1.0f);
+                }
+                else
+                {
+                    cell.color = new Color(0.88f, 0.90f, 0.95f);
+                }
+
+                if (!isHeader && i == 6)
+                {
+                    if (values[i] == "I") 
+                        cell.color = new Color(1f, 0.35f, 0.35f);
+                    else if (values[i] == "II") 
+                        cell.color = new Color(1f, 0.75f, 0.25f);
+                    else 
+                        cell.color = new Color(0.4f, 0.95f, 0.55f);
+                }
+
+                if (!isHeader && (i == 7 || i == 8))
+                {
+                    cell.color = new Color(0.7f, 0.85f, 1f);
+                }
 
                 LayoutElement le = cell.gameObject.AddComponent<LayoutElement>();
                 switch (i)
                 {
-                    case 0: le.preferredWidth = 80; break; 
-                    case 1: le.preferredWidth = 220; break; 
-                    case 2: le.preferredWidth = 100; break; 
-                    case 3: le.preferredWidth = 120; break; 
-                    case 4: le.preferredWidth = 240; break; 
-                    case 5: le.preferredWidth = 80; break; 
-                    case 6: le.preferredWidth = 90; break; 
-                    case 7: le.preferredWidth = 110; break; 
-                    case 8: le.preferredWidth = 120; break; 
-                    case 9: le.preferredWidth = 120; break; 
-                    case 10: le.preferredWidth = 280; break; 
+                    case 0: le.minWidth = 45; le.preferredWidth = 55; break;            // S.N
+                    case 1: le.minWidth = 160; le.flexibleWidth = 1; break;              // ID
+                    case 2: le.minWidth = 180; le.flexibleWidth = 1.5f; break;           // Name
+                    case 3: le.minWidth = 160; le.flexibleWidth = 1; break;              // Location
+                    case 4: le.minWidth = 180; le.flexibleWidth = 1.5f; break;           // Description
+                    case 5: le.minWidth = 45; le.preferredWidth = 55; break;             // Qty
+                    case 6: le.minWidth = 90; le.flexibleWidth = 0.7f; break;            // Priority
+                    case 7: le.minWidth = 120; le.flexibleWidth = 0.8f; break;           // M. Cost
+                    case 8: le.minWidth = 120; le.flexibleWidth = 0.8f; break;           // R. Cost
                 }
             }
         }

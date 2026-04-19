@@ -5,6 +5,10 @@ using BMS_v2;
 
 namespace BMS_v2.Editor
 {
+    /// <summary>
+    /// A custom Unity Editor script to procedurally generate TextMeshPro 3D labels for building zones in the scene.
+    /// This is used to visually identify buildings during development and in the final runtime environment.
+    /// </summary>
     public class BuildingLabelGenerator : EditorWindow
     {
         [MenuItem("BMS Tools/Generate Building Labels")]

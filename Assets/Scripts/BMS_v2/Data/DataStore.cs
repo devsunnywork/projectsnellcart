@@ -3,6 +3,10 @@ using UnityEngine;
 
 namespace BMS_v2
 {
+    /// <summary>
+    /// DataStore acts as a centralized, persistent repository for building and asset data throughout the application's lifecycle.
+    /// It provides methods to query, update, and manage in-memory collections of buildings and assets.
+    /// </summary>
     public class DataStore : MonoBehaviour
     {
         public static DataStore Instance { get; private set; }

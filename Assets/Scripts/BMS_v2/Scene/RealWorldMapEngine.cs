@@ -6,6 +6,10 @@ using System.IO;
 
 namespace BMS_v2
 {
+    /// <summary>
+    /// Connects to a tile server (e.g., Google Maps) to download and render a 2D satellite map
+    /// underneath the 3D models. Supports local caching to avoid redundant downloads.
+    /// </summary>
     public class RealWorldMapEngine : MonoBehaviour
     {
         public static RealWorldMapEngine Instance;

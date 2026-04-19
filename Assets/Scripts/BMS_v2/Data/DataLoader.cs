@@ -6,6 +6,10 @@ using UnityEngine.Networking;
 
 namespace BMS_v2
 {
+    /// <summary>
+    /// DataLoader is responsible for loading JSON data files representing buildings, floors, rooms, and assets 
+    /// from the local StreamingAssets directory. It parses the data and registers it within the DataStore system.
+    /// </summary>
     public class DataLoader : MonoBehaviour
     {
         public string assetsFileName = "assets.json";

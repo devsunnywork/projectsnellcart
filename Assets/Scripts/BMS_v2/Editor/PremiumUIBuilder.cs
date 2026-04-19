@@ -7,9 +7,13 @@ using UnityEngine.Events;
 
 namespace BMS_v2.Editor
 {
+    /// <summary>
+    /// Editor window tool to procedurally generate and wire up the final 2D overlay Enterprise HUD.
+    /// Manages the creation of buttons, panels, text elements, and links them to the appropriate managers.
+    /// </summary>
     public class PremiumUIBuilder : EditorWindow
     {
-        [MenuItem("BMS_v2 / 🚀 Generate FINAL Enterprise HUD (Side-by-Side)")]
+        [MenuItem("BMS_v2 / 🚀 Generate FINAL Enterprise HUD")]
         public static void GenerateUI()
         {
             Canvas canvas = Object.FindAnyObjectByType<Canvas>();
@@ -292,39 +296,165 @@ namespace BMS_v2.Editor
             UnityEditor.Events.UnityEventTools.AddVoidPersistentListener(helpBtn.onClick, openHelp);
             helpPanel.SetActive(false);
 
+            // ===== SUMMARY POPUP — PREMIUM FULL-PAGE REPORT =====
+            // Background panel — fills most of screen using CreateSolidPanel (proven pattern)
             GameObject summaryPopup = CreateSolidPanel("6. Summary_Popup", canvas.transform, 
-                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-275, -350), new Vector2(275, 350)); 
-            AddVerticalLayout(summaryPopup, 30, 10);
-            CreateText(summaryPopup.transform, "TECHNICAL REPORT", 26, new Color(1f, 0.9f, 0.2f)).alignment = TextAlignmentOptions.Center;
+                new Vector2(0, 0), new Vector2(1, 1), new Vector2(150, 100), new Vector2(-150, -100));
+            // NO VerticalLayoutGroup on the popup — use manual anchoring for each section
+
+            // --- HEADER (anchored to TOP, 70px tall) ---
+            GameObject headerSection = new GameObject("HeaderSection");
+            headerSection.transform.SetParent(summaryPopup.transform, false);
+            RectTransform headerRt = headerSection.AddComponent<RectTransform>();
+            headerRt.anchorMin = new Vector2(0, 1);
+            headerRt.anchorMax = new Vector2(1, 1);
+            headerRt.pivot = new Vector2(0.5f, 1);
+            headerRt.offsetMin = new Vector2(0, -70);
+            headerRt.offsetMax = Vector2.zero;
+            Image headerBg = headerSection.AddComponent<Image>();
+            headerBg.color = new Color(0.04f, 0.06f, 0.10f, 1f);
+
+            VerticalLayoutGroup headerVlg = headerSection.AddComponent<VerticalLayoutGroup>();
+            headerVlg.padding = new RectOffset(35, 35, 12, 8);
+            headerVlg.spacing = 3;
+            headerVlg.childControlWidth = true; headerVlg.childControlHeight = true;
+            headerVlg.childForceExpandHeight = false; headerVlg.childForceExpandWidth = true;
+            headerVlg.childAlignment = TextAnchor.MiddleCenter;
+
+            TextMeshProUGUI reportTitle = CreateText(headerSection.transform, "ENTERPRISE ASSET REPORT", 22, new Color(1f, 0.88f, 0.25f));
+            reportTitle.alignment = TextAlignmentOptions.Center;
+            reportTitle.characterSpacing = 3f;
+
+            TextMeshProUGUI reportSubtitle = CreateText(headerSection.transform, "Building Management System  •  Full Inventory Overview", 11, new Color(0.55f, 0.6f, 0.7f), false);
+            reportSubtitle.alignment = TextAlignmentOptions.Center;
+
+            // --- ACCENT LINE (2px, right below header at 70px from top) ---
+            GameObject headerAccent = new GameObject("HeaderAccent");
+            headerAccent.transform.SetParent(summaryPopup.transform, false);
+            RectTransform accentRt = headerAccent.AddComponent<RectTransform>();
+            accentRt.anchorMin = new Vector2(0, 1);
+            accentRt.anchorMax = new Vector2(1, 1);
+            accentRt.pivot = new Vector2(0.5f, 1);
+            accentRt.offsetMin = new Vector2(10, -72);
+            accentRt.offsetMax = new Vector2(-10, -70);
+            headerAccent.AddComponent<Image>().color = new Color(0.15f, 0.5f, 0.85f, 0.6f);
+
+            // --- BOTTOM BAR (anchored to BOTTOM, 55px tall) ---
+            GameObject bottomBar = new GameObject("BottomBar");
+            bottomBar.transform.SetParent(summaryPopup.transform, false);
+            RectTransform bottomRt = bottomBar.AddComponent<RectTransform>();
+            bottomRt.anchorMin = new Vector2(0, 0);
+            bottomRt.anchorMax = new Vector2(1, 0);
+            bottomRt.pivot = new Vector2(0.5f, 0);
+            bottomRt.offsetMin = Vector2.zero;
+            bottomRt.offsetMax = new Vector2(0, 55);
+            Image bottomBg = bottomBar.AddComponent<Image>();
+            bottomBg.color = new Color(0.04f, 0.06f, 0.10f, 1f);
+
+            HorizontalLayoutGroup bottomHlg = bottomBar.AddComponent<HorizontalLayoutGroup>();
+            bottomHlg.padding = new RectOffset(30, 30, 8, 8);
+            bottomHlg.spacing = 20;
+            bottomHlg.childControlWidth = true; bottomHlg.childControlHeight = true;
+            bottomHlg.childForceExpandWidth = false; bottomHlg.childForceExpandHeight = true;
+            bottomHlg.childAlignment = TextAnchor.MiddleCenter;
+
+            GameObject spacerL = new GameObject("SpacerL");
+            spacerL.transform.SetParent(bottomBar.transform, false);
+            spacerL.AddComponent<LayoutElement>().flexibleWidth = 1;
+
+            GameObject sCloseBtnObj = new GameObject("SummaryClose_Btn");
+            sCloseBtnObj.transform.SetParent(bottomBar.transform, false);
+            Image sImg = sCloseBtnObj.AddComponent<Image>();
+            sImg.color = new Color(0.14f, 0.45f, 0.85f, 1f);
+            if (btnRounded != null) { sImg.sprite = btnRounded; sImg.type = Image.Type.Sliced; }
+            LayoutElement closeLeLe = sCloseBtnObj.AddComponent<LayoutElement>();
+            closeLeLe.minWidth = 220; closeLeLe.preferredWidth = 260;
+            Button sCloseBtn = sCloseBtnObj.AddComponent<Button>();
+            TextMeshProUGUI closeTxt = CreateText(sCloseBtnObj.transform, "✕  CLOSE REPORT", 15, Color.white);
+            closeTxt.alignment = TextAlignmentOptions.Center;
+
+            GameObject spacerR = new GameObject("SpacerR");
+            spacerR.transform.SetParent(bottomBar.transform, false);
+            spacerR.AddComponent<LayoutElement>().flexibleWidth = 1;
+
+            // --- SCROLL AREA (fills BETWEEN header 72px and bottom 55px) ---
             GameObject tableScroll = new GameObject("ReportScroll");
             tableScroll.transform.SetParent(summaryPopup.transform, false);
+            RectTransform scrollRt = tableScroll.AddComponent<RectTransform>();
+            scrollRt.anchorMin = Vector2.zero;
+            scrollRt.anchorMax = Vector2.one;
+            scrollRt.offsetMin = new Vector2(0, 55);   // 55px from bottom (above bottom bar)
+            scrollRt.offsetMax = new Vector2(0, -72);   // 72px from top (below header + accent)
+            tableScroll.AddComponent<Image>().color = new Color(0, 0, 0, 0); // transparent, needed for ScrollRect
+
             ScrollRect smSr = tableScroll.AddComponent<ScrollRect>();
             smSr.horizontal = false; smSr.vertical = true;
-            tableScroll.AddComponent<LayoutElement>().flexibleHeight = 1;
+            smSr.scrollSensitivity = 150f;
+            smSr.movementType = ScrollRect.MovementType.Clamped;
+            smSr.inertia = true;
+            smSr.decelerationRate = 0.1f;
+
+            // Viewport — stretches to fill scroll area, CLIPS content with Mask
             GameObject smViewport = new GameObject("Viewport");
             smViewport.transform.SetParent(tableScroll.transform, false);
             RectTransform smVpRt = smViewport.AddComponent<RectTransform>();
-            smVpRt.anchorMin = Vector2.zero; smVpRt.anchorMax = Vector2.one; smVpRt.sizeDelta = Vector2.zero;
-            smViewport.AddComponent<Mask>().showMaskGraphic = false;
+            smVpRt.anchorMin = Vector2.zero; smVpRt.anchorMax = Vector2.one;
+            smVpRt.offsetMin = Vector2.zero; smVpRt.offsetMax = new Vector2(-12, 0);
+            Image vpImg = smViewport.AddComponent<Image>();
+            vpImg.color = new Color(0, 0, 0, 0.01f);
+            Mask vpMask = smViewport.AddComponent<Mask>();
+            vpMask.showMaskGraphic = false;
             smSr.viewport = smVpRt;
+
+            // Content container — grows with data, scrolls inside viewport
             GameObject smContent = new GameObject("ReportContent");
             smContent.transform.SetParent(smViewport.transform, false);
             RectTransform smCntRt = smContent.AddComponent<RectTransform>();
             smCntRt.anchorMin = new Vector2(0, 1); smCntRt.anchorMax = Vector2.one;
             smCntRt.pivot = new Vector2(0.5f, 1);
-            smContent.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            AddVerticalLayout(smContent, 5, 2); 
+            smCntRt.sizeDelta = Vector2.zero;
+            ContentSizeFitter csf = smContent.AddComponent<ContentSizeFitter>();
+            csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            VerticalLayoutGroup contentVlg = smContent.AddComponent<VerticalLayoutGroup>();
+            contentVlg.padding = new RectOffset(10, 10, 4, 8);
+            contentVlg.spacing = 1;
+            contentVlg.childControlWidth = true; contentVlg.childControlHeight = true;
+            contentVlg.childForceExpandHeight = false; contentVlg.childForceExpandWidth = true;
             smSr.content = smCntRt;
-            GameObject sCloseBtnObj = new GameObject("SummaryClose_Btn");
-            sCloseBtnObj.transform.SetParent(summaryPopup.transform, false);
-            Image sImg = sCloseBtnObj.AddComponent<Image>();
-            sImg.color = new Color(0.12f, 0.55f, 0.95f, 1f); if (btnRounded != null) { sImg.sprite = btnRounded; sImg.type = Image.Type.Sliced; }
-            sCloseBtnObj.AddComponent<LayoutElement>().minHeight = 55;
-            Button sCloseBtn = sCloseBtnObj.AddComponent<Button>();
-            CreateText(sCloseBtnObj.transform, "CLOSE REPORT", 16, Color.white).alignment = TextAlignmentOptions.Center;
+
+            // Scrollbar
+            GameObject sBarObj = new GameObject("VerticalScrollbar");
+            sBarObj.transform.SetParent(tableScroll.transform, false);
+            Image sBarBg = sBarObj.AddComponent<Image>();
+            sBarBg.color = new Color(0.08f, 0.10f, 0.14f, 0.5f);
+            Scrollbar sBar = sBarObj.AddComponent<Scrollbar>();
+            sBar.direction = Scrollbar.Direction.BottomToTop;
+            RectTransform sbRt = sBarObj.GetComponent<RectTransform>();
+            sbRt.anchorMin = new Vector2(1, 0); sbRt.anchorMax = new Vector2(1, 1);
+            sbRt.pivot = new Vector2(1, 0.5f);
+            sbRt.sizeDelta = new Vector2(10, 0);
+            sbRt.anchoredPosition = Vector2.zero;
+
+            GameObject slidingArea = new GameObject("SlidingArea");
+            slidingArea.transform.SetParent(sBarObj.transform, false);
+            RectTransform saRt = slidingArea.AddComponent<RectTransform>();
+            saRt.anchorMin = Vector2.zero; saRt.anchorMax = Vector2.one; saRt.sizeDelta = Vector2.zero;
+
+            GameObject handle = new GameObject("Handle");
+            handle.transform.SetParent(slidingArea.transform, false);
+            Image sbHandleImg = handle.AddComponent<Image>();
+            sbHandleImg.color = new Color(0.3f, 0.75f, 1.0f, 0.8f);
+            if (btnRounded != null) { sbHandleImg.sprite = btnRounded; sbHandleImg.type = Image.Type.Sliced; }
+            handle.GetComponent<RectTransform>().sizeDelta = new Vector2(8, 0);
+            sBar.targetGraphic = sbHandleImg;
+            sBar.handleRect = handle.GetComponent<RectTransform>();
+            smSr.verticalScrollbar = sBar;
+            smSr.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
+
+            // --- Wire up SummaryManager ---
             SummaryManager sumScript = summaryPopup.AddComponent<SummaryManager>();
             sumScript.summaryPanel = summaryPopup;
-            sumScript.titleText = summaryPopup.GetComponentInChildren<TextMeshProUGUI>(); 
+            sumScript.titleText = reportTitle; 
             sumScript.tableContent = smContent.transform;
             sumScript.closeBtn = sCloseBtn;
             string[] fontGuids = AssetDatabase.FindAssets("Mulish t:TMP_FontAsset");
@@ -335,6 +465,247 @@ namespace BMS_v2.Editor
             summaryPopup.SetActive(false);
 
             Selection.activeGameObject = canvas.gameObject;
+        }
+
+        [MenuItem("BMS_v2 / 🔄 Update Summary Panel Only")]
+        public static void UpdateSummaryOnly()
+        {
+            Canvas canvas = Object.FindAnyObjectByType<Canvas>();
+            if (canvas == null) { Debug.LogError("❌ No Canvas found! Generate full UI first."); return; }
+
+            // Find and delete the OLD summary popup
+            Transform oldSummary = canvas.transform.Find("6. Summary_Popup");
+            if (oldSummary != null) DestroyImmediate(oldSummary.gameObject);
+
+            // Find the DATA SUMMARY button to wire it up
+            Button sumBtn = null;
+            Transform topPanel = null;
+            foreach (Transform child in canvas.transform)
+            {
+                if (child.name.Contains("Top_DashboardPanel")) { topPanel = child; break; }
+            }
+            if (topPanel != null)
+            {
+                Transform sumBtnT = topPanel.Find("Summary_Btn");
+                if (sumBtnT != null) sumBtn = sumBtnT.GetComponent<Button>();
+            }
+
+            Sprite btnRounded = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Textures/UI/RoundedCorner.png");
+
+            // ===== REBUILD ONLY THE SUMMARY POPUP =====
+            GameObject summaryPopup = CreateSolidPanel("6. Summary_Popup", canvas.transform, 
+                new Vector2(0, 0), new Vector2(1, 1), new Vector2(150, 100), new Vector2(-150, -100));
+
+            // --- HEADER (anchored to TOP, 70px tall) ---
+            GameObject headerSection = new GameObject("HeaderSection");
+            headerSection.transform.SetParent(summaryPopup.transform, false);
+            RectTransform headerRt = headerSection.AddComponent<RectTransform>();
+            headerRt.anchorMin = new Vector2(0, 1);
+            headerRt.anchorMax = new Vector2(1, 1);
+            headerRt.pivot = new Vector2(0.5f, 1);
+            headerRt.offsetMin = new Vector2(0, -70);
+            headerRt.offsetMax = Vector2.zero;
+            Image headerBg = headerSection.AddComponent<Image>();
+            headerBg.color = new Color(0.04f, 0.06f, 0.10f, 1f);
+
+            VerticalLayoutGroup headerVlg = headerSection.AddComponent<VerticalLayoutGroup>();
+            headerVlg.padding = new RectOffset(35, 35, 12, 8);
+            headerVlg.spacing = 3;
+            headerVlg.childControlWidth = true; headerVlg.childControlHeight = true;
+            headerVlg.childForceExpandHeight = false; headerVlg.childForceExpandWidth = true;
+            headerVlg.childAlignment = TextAnchor.MiddleCenter;
+
+            TextMeshProUGUI reportTitle = CreateText(headerSection.transform, "ENTERPRISE ASSET REPORT", 22, new Color(1f, 0.88f, 0.25f));
+            reportTitle.alignment = TextAlignmentOptions.Center;
+            reportTitle.characterSpacing = 3f;
+
+            TextMeshProUGUI reportSubtitle = CreateText(headerSection.transform, "Building Management System  •  Full Inventory Overview", 11, new Color(0.55f, 0.6f, 0.7f), false);
+            reportSubtitle.alignment = TextAlignmentOptions.Center;
+
+            // --- ACCENT LINE ---
+            GameObject headerAccent = new GameObject("HeaderAccent");
+            headerAccent.transform.SetParent(summaryPopup.transform, false);
+            RectTransform accentRt = headerAccent.AddComponent<RectTransform>();
+            accentRt.anchorMin = new Vector2(0, 1);
+            accentRt.anchorMax = new Vector2(1, 1);
+            accentRt.pivot = new Vector2(0.5f, 1);
+            accentRt.offsetMin = new Vector2(10, -72);
+            accentRt.offsetMax = new Vector2(-10, -70);
+            headerAccent.AddComponent<Image>().color = new Color(0.15f, 0.5f, 0.85f, 0.6f);
+
+            // --- BOTTOM BAR (anchored to BOTTOM, 55px) ---
+            GameObject bottomBar = new GameObject("BottomBar");
+            bottomBar.transform.SetParent(summaryPopup.transform, false);
+            RectTransform bottomRt = bottomBar.AddComponent<RectTransform>();
+            bottomRt.anchorMin = new Vector2(0, 0);
+            bottomRt.anchorMax = new Vector2(1, 0);
+            bottomRt.pivot = new Vector2(0.5f, 0);
+            bottomRt.offsetMin = Vector2.zero;
+            bottomRt.offsetMax = new Vector2(0, 55);
+            bottomBar.AddComponent<Image>().color = new Color(0.04f, 0.06f, 0.10f, 1f);
+
+            HorizontalLayoutGroup bottomHlg = bottomBar.AddComponent<HorizontalLayoutGroup>();
+            bottomHlg.padding = new RectOffset(30, 30, 8, 8);
+            bottomHlg.spacing = 20;
+            bottomHlg.childControlWidth = true; bottomHlg.childControlHeight = true;
+            bottomHlg.childForceExpandWidth = false; bottomHlg.childForceExpandHeight = true;
+            bottomHlg.childAlignment = TextAnchor.MiddleCenter;
+
+            GameObject spacerL = new GameObject("SpacerL");
+            spacerL.transform.SetParent(bottomBar.transform, false);
+            spacerL.AddComponent<LayoutElement>().flexibleWidth = 1;
+
+            GameObject sCloseBtnObj = new GameObject("SummaryClose_Btn");
+            sCloseBtnObj.transform.SetParent(bottomBar.transform, false);
+            Image sImg = sCloseBtnObj.AddComponent<Image>();
+            sImg.color = new Color(0.14f, 0.45f, 0.85f, 1f);
+            if (btnRounded != null) { sImg.sprite = btnRounded; sImg.type = Image.Type.Sliced; }
+            LayoutElement closeLeLe = sCloseBtnObj.AddComponent<LayoutElement>();
+            closeLeLe.minWidth = 220; closeLeLe.preferredWidth = 260;
+            Button sCloseBtn = sCloseBtnObj.AddComponent<Button>();
+            TextMeshProUGUI closeTxt = CreateText(sCloseBtnObj.transform, "✕  CLOSE REPORT", 15, Color.white);
+            closeTxt.alignment = TextAlignmentOptions.Center;
+
+            GameObject spacerR = new GameObject("SpacerR");
+            spacerR.transform.SetParent(bottomBar.transform, false);
+            spacerR.AddComponent<LayoutElement>().flexibleWidth = 1;
+
+            // --- SCROLL AREA (between header and bottom bar) ---
+            GameObject tableScroll = new GameObject("ReportScroll");
+            tableScroll.transform.SetParent(summaryPopup.transform, false);
+            RectTransform scrollRt = tableScroll.AddComponent<RectTransform>();
+            scrollRt.anchorMin = Vector2.zero;
+            scrollRt.anchorMax = Vector2.one;
+            scrollRt.offsetMin = new Vector2(0, 55);
+            scrollRt.offsetMax = new Vector2(0, -72);
+            tableScroll.AddComponent<Image>().color = new Color(0, 0, 0, 0);
+
+            ScrollRect smSr = tableScroll.AddComponent<ScrollRect>();
+            smSr.horizontal = false; smSr.vertical = true;
+            smSr.scrollSensitivity = 150f;
+            smSr.movementType = ScrollRect.MovementType.Clamped;
+            smSr.inertia = true;
+            smSr.decelerationRate = 0.1f;
+
+            GameObject smViewport = new GameObject("Viewport");
+            smViewport.transform.SetParent(tableScroll.transform, false);
+            RectTransform smVpRt = smViewport.AddComponent<RectTransform>();
+            smVpRt.anchorMin = Vector2.zero; smVpRt.anchorMax = Vector2.one;
+            smVpRt.offsetMin = Vector2.zero; smVpRt.offsetMax = new Vector2(-12, 0);
+            smViewport.AddComponent<Image>().color = new Color(0, 0, 0, 0.01f);
+            smViewport.AddComponent<Mask>().showMaskGraphic = false;
+            smSr.viewport = smVpRt;
+
+            GameObject smContent = new GameObject("ReportContent");
+            smContent.transform.SetParent(smViewport.transform, false);
+            RectTransform smCntRt = smContent.AddComponent<RectTransform>();
+            smCntRt.anchorMin = new Vector2(0, 1); smCntRt.anchorMax = Vector2.one;
+            smCntRt.pivot = new Vector2(0.5f, 1);
+            smCntRt.sizeDelta = Vector2.zero;
+            smContent.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            VerticalLayoutGroup contentVlg = smContent.AddComponent<VerticalLayoutGroup>();
+            contentVlg.padding = new RectOffset(10, 10, 4, 8);
+            contentVlg.spacing = 1;
+            contentVlg.childControlWidth = true; contentVlg.childControlHeight = true;
+            contentVlg.childForceExpandHeight = false; contentVlg.childForceExpandWidth = true;
+            smSr.content = smCntRt;
+
+            // Scrollbar
+            GameObject sBarObj = new GameObject("VerticalScrollbar");
+            sBarObj.transform.SetParent(tableScroll.transform, false);
+            sBarObj.AddComponent<Image>().color = new Color(0.08f, 0.10f, 0.14f, 0.5f);
+            Scrollbar sBar = sBarObj.AddComponent<Scrollbar>();
+            sBar.direction = Scrollbar.Direction.BottomToTop;
+            RectTransform sbRt = sBarObj.GetComponent<RectTransform>();
+            sbRt.anchorMin = new Vector2(1, 0); sbRt.anchorMax = new Vector2(1, 1);
+            sbRt.pivot = new Vector2(1, 0.5f);
+            sbRt.sizeDelta = new Vector2(10, 0);
+            sbRt.anchoredPosition = Vector2.zero;
+
+            GameObject slidingArea = new GameObject("SlidingArea");
+            slidingArea.transform.SetParent(sBarObj.transform, false);
+            RectTransform saRt = slidingArea.AddComponent<RectTransform>();
+            saRt.anchorMin = Vector2.zero; saRt.anchorMax = Vector2.one; saRt.sizeDelta = Vector2.zero;
+
+            GameObject handle = new GameObject("Handle");
+            handle.transform.SetParent(slidingArea.transform, false);
+            Image sbHandleImg = handle.AddComponent<Image>();
+            sbHandleImg.color = new Color(0.3f, 0.75f, 1.0f, 0.8f);
+            if (btnRounded != null) { sbHandleImg.sprite = btnRounded; sbHandleImg.type = Image.Type.Sliced; }
+            handle.GetComponent<RectTransform>().sizeDelta = new Vector2(8, 0);
+            sBar.targetGraphic = sbHandleImg;
+            sBar.handleRect = handle.GetComponent<RectTransform>();
+            smSr.verticalScrollbar = sBar;
+            smSr.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
+
+            // Wire up SummaryManager
+            SummaryManager sumScript = summaryPopup.AddComponent<SummaryManager>();
+            sumScript.summaryPanel = summaryPopup;
+            sumScript.titleText = reportTitle;
+            sumScript.tableContent = smContent.transform;
+            sumScript.closeBtn = sCloseBtn;
+            string[] fontGuids = AssetDatabase.FindAssets("Mulish t:TMP_FontAsset");
+            if (fontGuids.Length > 0) sumScript.mulishFont = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(AssetDatabase.GUIDToAssetPath(fontGuids[0]));
+
+            // Wire DATA SUMMARY button to this new popup
+            if (sumBtn != null)
+            {
+                sumBtn.onClick.RemoveAllListeners();
+                UnityAction openSum = new UnityAction(sumScript.OpenSummary);
+                UnityEditor.Events.UnityEventTools.AddVoidPersistentListener(sumBtn.onClick, openSum);
+            }
+
+            summaryPopup.SetActive(false);
+            Debug.Log("✅ Summary Panel rebuilt! Other UI panels untouched.");
+        }
+
+        [MenuItem("BMS_v2 / 🔧 Fix Help Button Wiring")]
+        public static void FixHelpButton()
+        {
+            Canvas canvas = Object.FindAnyObjectByType<Canvas>();
+            if (canvas == null) { Debug.LogError("❌ Canvas not found."); return; }
+
+            Button helpBtn = null;
+            HelpManager helpScript = null;
+
+            foreach (Transform child in canvas.transform.GetComponentsInChildren<Transform>(true))
+            {
+                if (child.name == "Help_Btn")
+                {
+                    helpBtn = child.GetComponent<Button>();
+                    if (helpBtn != null)
+                    {
+                        // Ensure background graphic is targetable
+                        Image img = helpBtn.GetComponent<Image>();
+                        if (img != null)
+                        {
+                            img.raycastTarget = true;
+                            if (img.sprite == null)
+                            {
+                                Sprite rounded = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Textures/UI/RoundedCorner.png");
+                                if (rounded != null) { img.sprite = rounded; img.type = Image.Type.Sliced; }
+                            }
+                        }
+                    }
+                }
+                if (child.GetComponent<HelpManager>() != null)
+                {
+                    helpScript = child.GetComponent<HelpManager>();
+                }
+            }
+
+            if (helpBtn != null && helpScript != null)
+            {
+                helpBtn.onClick.RemoveAllListeners();
+                UnityAction openHelp = new UnityAction(helpScript.OpenHelp);
+                UnityEditor.Events.UnityEventTools.AddVoidPersistentListener(helpBtn.onClick, openHelp);
+                EditorUtility.SetDirty(helpBtn);
+                Debug.Log("✅ Help Button successfully wired!");
+            }
+            else
+            {
+                Debug.LogWarning("⚠️ Could not find Help_Btn or HelpManager in the scene.");
+            }
         }
 
         [MenuItem("BMS_v2 / 🏷️ Create In-Game Room Label Template")]
@@ -569,6 +940,99 @@ namespace BMS_v2.Editor
             TextMeshProUGUI kt = CreateText(g.transform, key, 16, new Color(0.2f, 0.8f, 1.0f));
             kt.gameObject.AddComponent<LayoutElement>().minWidth = 150;
             CreateText(g.transform, desc, 14, Color.white, false);
+        }
+
+        // ================================================================
+        //  3D ARROW INDICATOR — spawn from menu, place above buildings
+        // ================================================================
+        [MenuItem("BMS_v2 / ➤ Create 3D Arrow Indicator")]
+        public static void Create3DArrow()
+        {
+            GameObject arrowRoot = new GameObject("3D_Arrow_Indicator");
+
+            if (SceneView.lastActiveSceneView != null)
+            {
+                Camera sceneCam = SceneView.lastActiveSceneView.camera;
+                arrowRoot.transform.position = sceneCam.transform.position + sceneCam.transform.forward * 15f;
+            }
+            else
+            {
+                arrowRoot.transform.position = Vector3.up * 20f;
+            }
+
+            // Arrow Body (cylinder)
+            GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            body.name = "Arrow_Body";
+            body.transform.SetParent(arrowRoot.transform, false);
+            body.transform.localPosition = new Vector3(0, 1.5f, 0);
+            body.transform.localScale = new Vector3(0.4f, 1.5f, 0.4f);
+            Collider bodyCol = body.GetComponent<Collider>();
+            if (bodyCol != null) Object.DestroyImmediate(bodyCol);
+            Renderer bodyRend = body.GetComponent<Renderer>();
+            if (bodyRend != null)
+            {
+                Material bodyMat = new Material(Shader.Find("Sprites/Default"));
+                bodyMat.color = new Color(1f, 0.45f, 0f, 1f);
+                bodyRend.sharedMaterial = bodyMat;
+            }
+
+            // Arrow Head (procedural cone pointing down)
+            GameObject head = new GameObject("Arrow_Head");
+            head.transform.SetParent(arrowRoot.transform, false);
+            head.transform.localPosition = Vector3.zero;
+            MeshFilter mf = head.AddComponent<MeshFilter>();
+            MeshRenderer mr = head.AddComponent<MeshRenderer>();
+            mf.sharedMesh = GenerateArrowConeMesh(1f, 1.2f, 24);
+            Material headMat = new Material(Shader.Find("Sprites/Default"));
+            headMat.color = new Color(1f, 0.2f, 0f, 1f);
+            mr.sharedMaterial = headMat;
+
+            arrowRoot.layer = LayerMask.NameToLayer("Ignore Raycast");
+            foreach (Transform child in arrowRoot.transform)
+                child.gameObject.layer = LayerMask.NameToLayer("Ignore Raycast");
+
+            // Attach bob animation so it bounces up/down at runtime
+            arrowRoot.AddComponent<ArrowBobAnimation>();
+
+            Selection.activeGameObject = arrowRoot;
+            Undo.RegisterCreatedObjectUndo(arrowRoot, "Create 3D Arrow");
+            Debug.Log("➤ 3D Arrow created! Move it above your building, adjust scale/bob settings in Inspector.");
+        }
+
+        private static Mesh GenerateArrowConeMesh(float height, float radius, int segments)
+        {
+            Mesh mesh = new Mesh();
+            mesh.name = "ArrowCone";
+            int vertCount = segments + 2;
+            Vector3[] verts = new Vector3[vertCount];
+            int[] tris = new int[segments * 6];
+            verts[0] = new Vector3(0, -height, 0);
+            for (int i = 0; i < segments; i++)
+            {
+                float angle = (float)i / segments * Mathf.PI * 2f;
+                verts[i + 1] = new Vector3(Mathf.Cos(angle) * radius, 0, Mathf.Sin(angle) * radius);
+            }
+            verts[vertCount - 1] = Vector3.zero;
+            for (int i = 0; i < segments; i++)
+            {
+                int next = (i + 1) % segments;
+                tris[i * 3] = 0;
+                tris[i * 3 + 1] = next + 1;
+                tris[i * 3 + 2] = i + 1;
+            }
+            int bs = segments * 3;
+            for (int i = 0; i < segments; i++)
+            {
+                int next = (i + 1) % segments;
+                tris[bs + i * 3] = vertCount - 1;
+                tris[bs + i * 3 + 1] = i + 1;
+                tris[bs + i * 3 + 2] = next + 1;
+            }
+            mesh.vertices = verts;
+            mesh.triangles = tris;
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            return mesh;
         }
     }
 }

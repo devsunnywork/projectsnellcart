@@ -3,6 +3,10 @@ using UnityEngine.UI;
 
 namespace BMS_v2
 {
+    /// <summary>
+    /// Manages the in-game Settings popup menu, providing options to resume application 
+    /// operations or exit the system entirely.
+    /// </summary>
     public class SettingsManager : MonoBehaviour
     {
         public Button resumeBtn;

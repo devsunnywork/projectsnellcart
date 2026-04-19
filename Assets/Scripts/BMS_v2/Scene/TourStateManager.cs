@@ -3,6 +3,10 @@ using System.Collections.Generic;
 
 namespace BMS_v2
 {
+    /// <summary>
+    /// Manages the logical state of the user's tour (Global, Building, Floor, Asset).
+    /// Dynamically toggles interaction layers so users only click on appropriate scale items based on their current view.
+    /// </summary>
     public class TourStateManager : MonoBehaviour
     {
         public static TourStateManager Instance;
@@ -74,38 +78,38 @@ namespace BMS_v2
             switch (newState)
             {
                 case ViewState.Global:
-                    SetColliders(buildings, true);
-                    SetColliders(floors, false);
-                    SetColliders(rooms, false);
-                    SetColliders(assets, false);
+                    SetInteractionState(buildings, true);
+                    SetInteractionState(floors, false);
+                    SetInteractionState(rooms, false);
+                    SetInteractionState(assets, false);
                     break;
 
                 case ViewState.BuildingFront:
-                    SetColliders(buildings, false); 
-                    SetColliders(floors, true);
-                    SetColliders(rooms, false);
-                    SetColliders(assets, false);
+                    SetInteractionState(buildings, false); 
+                    SetInteractionState(floors, true);
+                    SetInteractionState(rooms, false);
+                    SetInteractionState(assets, false);
                     break;
 
                 case ViewState.InternalFloor:
                     
-                    SetColliders(buildings, false);
-                    SetColliders(floors, false); 
-                    SetColliders(rooms, true);
-                    SetColliders(assets, true);
+                    SetInteractionState(buildings, false);
+                    SetInteractionState(floors, false); 
+                    SetInteractionState(rooms, true);
+                    SetInteractionState(assets, true);
                     break;
 
                 case ViewState.AssetFocus:
                     
-                    SetColliders(buildings, false);
-                    SetColliders(floors, false); 
-                    SetColliders(rooms, false);
-                    SetColliders(assets, true);
+                    SetInteractionState(buildings, false);
+                    SetInteractionState(floors, false); 
+                    SetInteractionState(rooms, false);
+                    SetInteractionState(assets, true);
                     break;
             }
         }
 
-        private void SetColliders(List<MonoBehaviour> group, bool enableColliders)
+        private void SetInteractionState(List<MonoBehaviour> group, bool interactable)
         {
             foreach (var item in group)
             {
@@ -114,7 +118,12 @@ namespace BMS_v2
                     Collider[] cols = item.GetComponentsInChildren<Collider>();
                     foreach (Collider c in cols)
                     {
-                        c.enabled = enableColliders;
+                        // We keep the collider enabled so the SmartCameraController (Physics) still hits it.
+                        // We just change the layer so the AssetInteractionManager (Raycast) ignores it if not interactable.
+                        c.enabled = true;
+                        
+                        // Layer 2 is the built-in "Ignore Raycast" layer in Unity
+                        c.gameObject.layer = interactable ? 0 : 2; 
                     }
                 }
             }

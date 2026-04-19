@@ -6,6 +6,10 @@ using System;
 
 namespace BMS_v2
 {
+    /// <summary>
+    /// Responsible for fetching live OpenStreetMap (OSM) data and dynamically generating 3D meshes 
+    /// representing surrounding buildings. Enhances the visual context of the real-world map.
+    /// </summary>
     public class Building3DEngine : MonoBehaviour
     {
         public static Building3DEngine Instance;
@@ -151,6 +155,10 @@ namespace BMS_v2
             mesh.triangles = triangles;
             mesh.RecalculateNormals();
             mf.mesh = mesh;
+            
+            // Add collider so camera/player doesn't go through walls
+            MeshCollider mc = bld.AddComponent<MeshCollider>();
+            mc.sharedMesh = mesh;
 
             
             GameObject outline = new GameObject("Outline");

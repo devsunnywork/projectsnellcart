@@ -1,76 +1,17 @@
-# Simplified .gitignore to push ONLY code and JSON
-/Library/
-/Temp/
-/Obj/
-/Build/
-/Builds/
-/Logs/
-/UserSettings/
-/.vs/
-/.vscode/
-/*.csproj
-/*.sln
-/*.suo
-/*.user
-/*.userprefs
+# Ignore everything in the root directory
+/*
 
-# Ignore all binary and large asset types
-*.fbx
-*.obj
-*.blend
-*.png
-*.jpg
-*.jpeg
-*.tga
-*.psd
-*.tif
-*.tiff
-*.wav
-*.mp3
-*.ogg
-*.unity
-*.prefab
-*.mat
-*.asset
-*.controller
-*.overrideController
-*.physicMaterial
-*.fontsettings
-*.renderTexture
-*.spriteatlas
-*.terrainlayer
-*.mask
-*.guiskin
-*.inputactions
-*.rar
-*.zip
-*.7z
-*.glb
-*.blend1
+# Except the Assets directory
+!/Assets/
 
-# Ignore all Unity meta files if user only wants code
-*.meta
+# Ignore everything inside Assets directory
+/Assets/*
 
-# Ignore TextMesh Pro folder entirely
-[Aa]ssets/TextMesh\ Pro/
+# Except the Scripts directory
+!/Assets/Scripts/
 
-# Ignore Tutorial info except scripts
-[Aa]ssets/TutorialInfo/
-![Aa]ssets/TutorialInfo/Scripts/
-![Aa]ssets/TutorialInfo/Scripts/**/*.cs
+# Ensure all files inside Scripts are NOT ignored
+!/Assets/Scripts/**
 
-# Ignore other Asset folders except Scripts and BuildingData
-[Aa]ssets/Exterior/
-[Aa]ssets/Interior/
-[Aa]ssets/Materials/
-[Aa]ssets/Prefab/
-[Aa]ssets/Prefabs/
-[Aa]ssets/Resources/
-[Aa]ssets/Scenes/
-[Aa]ssets/Settings/
-[Aa]ssets/Textures/
-[Aa]ssets/UI/
-[Aa]ssets/objects/
-
-# Allow only CS and JSON in general
-# (But the above folders are already ignored)
+# Explicitly allow the .gitignore itself
+!.gitignore

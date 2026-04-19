@@ -4,6 +4,10 @@ using BMS_v2;
 
 namespace BMS_v2.Editor
 {
+    /// <summary>
+    /// Custom editor script for the RealWorldMapEngine. Provides a custom inspector with buttons 
+    /// to manually build the map or clear tiles during development, as well as an accessible menu option.
+    /// </summary>
     [CustomEditor(typeof(RealWorldMapEngine))]
     public class MapEngineEditor : UnityEditor.Editor
     {

@@ -2,6 +2,10 @@ using UnityEngine;
 
 namespace BMS_v2
 {
+    /// <summary>
+    /// Handles user interaction via mouse clicks or taps on 3D assets and building zones in the scene.
+    /// Raycasts into the world, filters out blocked clicks, and triggers appropriate UI and camera responses.
+    /// </summary>
     public class AssetInteractionManager : MonoBehaviour
     {
         [Header("UI Reference")]
@@ -57,7 +61,7 @@ namespace BMS_v2
                             cleanId = (aInfo != null) ? aInfo.assetId : zInfo.zoneId;
                         }
                     }
-                    else if (!hit.collider.isTrigger) 
+                    else if (!hit.collider.isTrigger && hit.collider.gameObject.layer != 2) // Ignore Raycast layer
                     {
                         if (hit.distance < nearestBlockerDist)
                         {

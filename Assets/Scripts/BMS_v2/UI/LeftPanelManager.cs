@@ -5,6 +5,10 @@ using System.Collections.Generic;
 
 namespace BMS_v2
 {
+    /// <summary>
+    /// Manages the Left Panel UI containing the Local Search functionality and 
+    /// the Operations/Task tracking dashboard. Filters tasks and assets based on user search.
+    /// </summary>
     public class LeftPanelManager : MonoBehaviour
     {
         public GameObject[] allAccordions;
@@ -61,6 +65,39 @@ namespace BMS_v2
                 LayoutElement le = GetComponent<LayoutElement>();
                 if (le != null) { le.minWidth = 300; le.preferredWidth = 300; }
                 LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
+            }
+        }
+
+        private void Update()
+        {
+            // Lock search if outside building
+            if (TourStateManager.Instance != null && searchInput != null)
+            {
+                bool isInside = TourStateManager.Instance.CurrentState == TourStateManager.ViewState.InternalFloor || 
+                                TourStateManager.Instance.CurrentState == TourStateManager.ViewState.AssetFocus;
+
+                if (!isInside)
+                {
+                    searchInput.interactable = false;
+                    searchInput.text = ""; // Clear any existing query
+                    if (searchInput.placeholder is TextMeshProUGUI placeholderText)
+                    {
+                        placeholderText.text = "GO INSIDE TO SEARCH...";
+                        placeholderText.color = new Color(1f, 0.4f, 0.4f, 0.8f); // Soft Red
+                    }
+                }
+                else
+                {
+                    if (!searchInput.interactable)
+                    {
+                        searchInput.interactable = true;
+                        if (searchInput.placeholder is TextMeshProUGUI placeholderText)
+                        {
+                            placeholderText.text = "SEARCH ASSETS...";
+                            placeholderText.color = new Color(1f, 1f, 1f, 0.5f); // Normal Gray/White
+                        }
+                    }
+                }
             }
         }
 
@@ -345,20 +382,34 @@ namespace BMS_v2
 
         private void OnResultClicked(AssetData asset)
         {
+            AssetDetailPanel detailPanel = FindAnyObjectByType<AssetDetailPanel>(FindObjectsInactive.Include);
             
+            // Check if we are outside (Global View)
+            bool isOutside = (TourStateManager.Instance != null && TourStateManager.Instance.CurrentState == TourStateManager.ViewState.Global);
+
+            if (isOutside)
+            {
+                // If outside, show warning in the panel and don't move camera
+                if (detailPanel != null)
+                {
+                    detailPanel.gameObject.SetActive(true);
+                    detailPanel.ShowOutsideWarning(asset.id);
+                }
+                Debug.Log("[Search] Canceled focus: User is outside the building.");
+                return;
+            }
+
+            // Standard logic if already inside
             if (TourStateManager.Instance != null)
             {
                 TourStateManager.Instance.ProcessInteraction(asset.id);
             }
 
-            
             if (SmartCameraController.Instance != null)
             {
                 SmartCameraController.Instance.FocusOnAsset(asset.id);
             }
 
-            
-            AssetDetailPanel detailPanel = FindAnyObjectByType<AssetDetailPanel>(FindObjectsInactive.Include);
             if (detailPanel != null)
             {
                 detailPanel.gameObject.SetActive(true);

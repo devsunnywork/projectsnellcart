@@ -4,6 +4,10 @@ using TMPro;
 
 namespace BMS_v2
 {
+    /// <summary>
+    /// Manages the top HUD dashboard displaying aggregated global metrics like 
+    /// Total Investment, Active Units, and Warranty Coverage from all assets.
+    /// </summary>
     public class GlobalDashboardManager : MonoBehaviour
     {
         [Header("Top Panel Elements")]

@@ -19,6 +19,10 @@ namespace BMS_v2
         public List<PatchEntry> patches;
     }
 
+    /// <summary>
+    /// PatchProcessor handles incoming data modifications or delta updates (patches), such as adding, updating, or archiving assets.
+    /// It applies these changes directly to the in-memory DataStore.
+    /// </summary>
     public class PatchProcessor : MonoBehaviour
     {
         public void ApplyPatches(string patchesJson)

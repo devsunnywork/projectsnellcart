@@ -4,6 +4,9 @@ using TMPro;
 
 namespace BMS_v2
 {
+    /// <summary>
+    /// Handles the display of the Help and FAQ overlay popup explaining controls and tools.
+    /// </summary>
     public class HelpManager : MonoBehaviour
     {
         public Button closeBtn;

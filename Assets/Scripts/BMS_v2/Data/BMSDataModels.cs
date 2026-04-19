@@ -4,6 +4,11 @@ using UnityEngine;
 
 namespace BMS_v2
 {
+    /// <summary>
+    /// This file contains all the serializable data models used to represent the building management system's data.
+    /// It includes structures defining asset details like location, identity, lifecycle, cost, warranty, and quality,
+    /// as well as the hierarchical structure of buildings, floors, and rooms.
+    /// </summary>
     [Serializable]
     public class Vector3Data { public float x, y, z; }
 

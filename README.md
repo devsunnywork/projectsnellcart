@@ -1,12 +1,12 @@
-# Building Management System v2 (BMS_v2) - Project Handover Documentation
+# Building Tracker - Project Handover Documentation
 
-Welcome to the comprehensive handover documentation for the **Building Management System v2 (BMS_v2)**. This application is a fully integrated 3D visual management engine built in Unity, designed to offer facility managers, technical staff, and administrative personnel an interactive, data-driven way to manage real estate assets, monitor equipment lifecycles, track maintenance tasks, and perform digital tours.
+Welcome to the comprehensive handover documentation for **Building Tracker**. This application is a fully integrated 3D visual management engine built in Unity, designed to offer facility managers, technical staff, and administrative personnel an interactive, data-driven way to manage real estate assets, monitor equipment lifecycles, track maintenance tasks, and perform digital tours.
 
 ---
 
 ## 1. Project Overview
 
-The BMS_v2 is essentially a **"Digital Twin"** interface for buildings. Instead of scrolling through 2D spreadsheets to find asset data, users can fly through a realistic 3D representation of their building, drill down into specific rooms, and interact with individual assets to view and edit live data panels. 
+Building Tracker is essentially a **"Digital Twin"** interface for buildings. Instead of scrolling through 2D spreadsheets to find asset data, users can fly through a realistic 3D representation of their building, drill down into specific rooms, and interact with individual assets to view and edit live data panels. 
 
 **Key Features:**
 *   **3D Spatial Navigation:** Move seamlessly from an aerial city map down to specific floor plans and interior rooms.

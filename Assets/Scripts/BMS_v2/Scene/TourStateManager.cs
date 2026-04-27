@@ -75,6 +75,18 @@ namespace BMS_v2
             CurrentState = newState;
             Debug.Log($"[TourStateManager] Phase Shift: {newState}");
 
+            // Automatically show/hide the Building Insight Table based on view state
+            BuildingInsightManager bim = BuildingInsightManager.Instance;
+            if (bim == null) bim = Object.FindAnyObjectByType<BuildingInsightManager>(FindObjectsInactive.Include);
+
+            if (bim != null)
+            {
+                if (newState == ViewState.BuildingFront)
+                    bim.ShowPanel();
+                else
+                    bim.HidePanel();
+            }
+
             switch (newState)
             {
                 case ViewState.Global:

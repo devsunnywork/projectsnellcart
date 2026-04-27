@@ -92,6 +92,18 @@ namespace BMS_v2
     }
 
     [Serializable]
+    public class GalleryData
+    {
+        public string image_url;
+        public string worker_name;
+        public string role;
+        public string work_description;
+        public string how_it_was_done;
+        public float cost;
+        public string date;
+    }
+
+    [Serializable]
     public class TaskData
     {
         public string id, asset_id, task_type, department, description, priority;
@@ -114,6 +126,7 @@ namespace BMS_v2
         public AssetWarrantyData warranty;
         public AssetQualityData quality;
         public List<TaskData> tasks;
+        public List<GalleryData> gallery;
         public List<string> tags;
         public string notes, created_at, updated_at;
     }

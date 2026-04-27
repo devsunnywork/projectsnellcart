@@ -29,11 +29,11 @@ namespace BMS_v2
                 {
                     foreach (var col in allCols)
                     {
-                        Physics.IgnoreCollision(col, camPlayer, true);
+                        if (!col.isTrigger) Physics.IgnoreCollision(col, camPlayer, true);
                     }
                     foreach (var col in parentCols)
                     {
-                        Physics.IgnoreCollision(col, camPlayer, true);
+                        if (!col.isTrigger) Physics.IgnoreCollision(col, camPlayer, true);
                     }
                     Debug.Log($"[PhysicsFix] Recursively ignoring {allCols.Length + parentCols.Length} colliders for {gameObject.name}");
                 }

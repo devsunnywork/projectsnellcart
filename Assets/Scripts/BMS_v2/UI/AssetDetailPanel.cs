@@ -27,18 +27,38 @@ namespace BMS_v2
         public TMP_Text headerSubtitleText;
         public TMP_Text editButtonText; 
 
+        public Transform galleryTabContent;
+        public GameObject imageRowPrefab; // A prefab for images in the gallery tab
+        public GameObject centerGalleryPanel;
+        public RawImage centerPopupImage;
+        public TextMeshProUGUI centerPopupDetails;
+        
         [Header("For Accordion/Tabs")]
         public GameObject[] allTabs; 
 
         private List<InfoRowUI> activeRows = new List<InfoRowUI>();
+        private List<GameObject> activeImageRows = new List<GameObject>();
         private AssetData currentAssetData;
         private bool isEditMode = false;
+        private Coroutine blinkCoroutine;
 
         private void Awake()
         {
-            
             RectTransform rt = GetComponent<RectTransform>();
             if (rt != null) rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 300);
+
+            if (centerGalleryPanel != null)
+            {
+                Button[] buttons = centerGalleryPanel.GetComponentsInChildren<Button>(true);
+                foreach (Button btn in buttons)
+                {
+                    if (btn.gameObject.name == "CloseButton")
+                    {
+                        btn.onClick.AddListener(() => centerGalleryPanel.SetActive(false));
+                        break;
+                    }
+                }
+            }
         }
 
         public void ToggleTab(GameObject tabToToggle)
@@ -51,11 +71,22 @@ namespace BMS_v2
 
         public void ClearExistingRows()
         {
+            if (galleryTabContent != null && galleryTabContent.parent != null)
+            {
+                galleryTabContent.parent.gameObject.SetActive(false);
+            }
+
             foreach (var row in activeRows)
             {
                 if (row != null) Destroy(row.gameObject);
             }
             activeRows.Clear();
+            
+            foreach (var obj in activeImageRows)
+            {
+                if (obj != null) Destroy(obj);
+            }
+            activeImageRows.Clear();
         }
 
         public void ShowOutsideWarning(string assetId)
@@ -85,6 +116,7 @@ namespace BMS_v2
             if (DataStore.Instance == null || !DataStore.Instance.IsDataLoaded) return;
             if (string.IsNullOrEmpty(id)) return;
 
+            bool wasActive = gameObject.activeSelf;
             SummaryManager.LastSelectedId = id; 
             gameObject.SetActive(true);
             isEditMode = false;
@@ -126,10 +158,23 @@ namespace BMS_v2
                     if (tab != null) {
                         tab.SetActive(false);
                         
-                        if (tab.transform.parent != null) tab.transform.parent.gameObject.SetActive(true);
+                        // Force display only the base 5 tabs. Gallery visibility is explicitly handled by RenderSingleAssetContext.
+                        if (tab.transform.parent != null) 
+                        {
+                            if (galleryTabContent == null || tab != galleryTabContent.gameObject)
+                            {
+                                tab.transform.parent.gameObject.SetActive(true);
+                            }
+                        }
                     }
                 }
                 if (allTabs.Length > 0 && allTabs[0] != null) allTabs[0].SetActive(true); 
+            }
+
+            if (wasActive)
+            {
+                if (blinkCoroutine != null) StopCoroutine(blinkCoroutine);
+                blinkCoroutine = StartCoroutine(BlinkInfoRoutine());
             }
         }
 
@@ -529,6 +574,25 @@ namespace BMS_v2
                     }
                 }
             }
+
+            if (galleryTabContent != null && galleryTabContent.parent != null)
+            {
+                if (data.gallery != null && data.gallery.Count > 0)
+                {
+                    galleryTabContent.parent.gameObject.SetActive(true);
+                    SetTabTitle(galleryTabContent, "GALLERY");
+
+                    foreach (var gData in data.gallery)
+                    {
+                        AddRow(galleryTabContent, "Notice", "Double click the image to view extra information", null);
+                        AddImageRow(galleryTabContent, gData);
+                    }
+                }
+                else
+                {
+                    galleryTabContent.parent.gameObject.SetActive(false);
+                }
+            }
         }
 
         private string FormatText(string text)
@@ -555,6 +619,151 @@ namespace BMS_v2
         public void HidePanel()
         {
             gameObject.SetActive(false);
+        }
+
+        private System.Collections.IEnumerator BlinkInfoRoutine()
+        {
+            float blinkDuration = 0.25f;
+            float t = 0;
+
+            Color origTitle = headerTitleText != null ? headerTitleText.color : Color.white;
+            Color origSub = headerSubtitleText != null ? headerSubtitleText.color : Color.white;
+
+            origTitle.a = 1f;
+            origSub.a = 1f;
+
+            while (t < blinkDuration)
+            {
+                t += Time.deltaTime;
+                float progress = t / blinkDuration;
+                float alpha = Mathf.Clamp01(Mathf.SmoothStep(0f, 1f, progress)); 
+
+                if (headerTitleText != null) {
+                    Color c = origTitle; c.a = alpha;
+                    headerTitleText.color = c;
+                }
+                if (headerSubtitleText != null) {
+                    Color c = origSub; c.a = alpha;
+                    headerSubtitleText.color = c;
+                }
+
+                foreach(var row in activeRows)
+                {
+                    if (row != null) {
+                        CanvasGroup cg = row.GetComponent<CanvasGroup>();
+                        if (cg == null) cg = row.gameObject.AddComponent<CanvasGroup>();
+                        cg.alpha = alpha;
+                    }
+                }
+
+                yield return null;
+            }
+
+            if (headerTitleText != null) headerTitleText.color = origTitle;
+            if (headerSubtitleText != null) headerSubtitleText.color = origSub;
+            foreach(var row in activeRows)
+            {
+                if (row != null) {
+                    CanvasGroup cg = row.GetComponent<CanvasGroup>();
+                    if (cg != null) cg.alpha = 1f;
+                }
+            }
+        }
+
+        private void AddImageRow(Transform container, GalleryData gData)
+        {
+            if (container == null || gData == null) return;
+            
+            GameObject imgObj;
+            RawImage rawImage = null;
+
+            if (imageRowPrefab != null)
+            {
+                imgObj = Instantiate(imageRowPrefab, container);
+                rawImage = imgObj.GetComponentInChildren<RawImage>();
+            }
+            else
+            {
+                imgObj = new GameObject("GalleryImageRow");
+                imgObj.transform.SetParent(container, false);
+                LayoutElement layout = imgObj.AddComponent<LayoutElement>();
+                layout.minHeight = 150f;
+                rawImage = imgObj.AddComponent<RawImage>();
+                rawImage.color = new Color(0.2f, 0.2f, 0.2f, 1f); 
+            }
+            
+            activeImageRows.Add(imgObj);
+
+            if (rawImage != null)
+            {
+                StartCoroutine(LoadTextureRoutine(gData.image_url, rawImage));
+            }
+            
+            UnityEngine.EventSystems.EventTrigger trigger = imgObj.GetComponent<UnityEngine.EventSystems.EventTrigger>();
+            if (trigger == null) trigger = imgObj.AddComponent<UnityEngine.EventSystems.EventTrigger>();
+            
+            UnityEngine.EventSystems.EventTrigger.Entry entry = new UnityEngine.EventSystems.EventTrigger.Entry();
+            entry.eventID = UnityEngine.EventSystems.EventTriggerType.PointerClick;
+            entry.callback.AddListener((data) => {
+                UnityEngine.EventSystems.PointerEventData pData = (UnityEngine.EventSystems.PointerEventData)data;
+                if (pData.clickCount == 2 && rawImage != null)
+                {
+                    ShowCenterGalleryPanel(gData, rawImage.texture);
+                }
+            });
+            trigger.triggers.Add(entry);
+        }
+
+        private System.Collections.IEnumerator LoadTextureRoutine(string url, RawImage img)
+        {
+            if (string.IsNullOrEmpty(url)) yield break;
+            
+            string path = url;
+            if (!url.StartsWith("http") && !url.StartsWith("file:"))
+            {
+                path = System.IO.Path.Combine(Application.streamingAssetsPath, url);
+                path = "file:///" + path.Replace("\\", "/");
+            }
+            
+            using (UnityEngine.Networking.UnityWebRequest w = UnityEngine.Networking.UnityWebRequestTexture.GetTexture(path))
+            {
+                yield return w.SendWebRequest();
+                if (w.result == UnityEngine.Networking.UnityWebRequest.Result.Success)
+                {
+                    Texture2D tex = UnityEngine.Networking.DownloadHandlerTexture.GetContent(w);
+                    if (img != null) 
+                    {
+                        img.texture = tex;
+                        img.color = Color.white;
+                    }
+                }
+            }
+        }
+
+        private void ShowCenterGalleryPanel(GalleryData gData, Texture tex)
+        {
+            if (centerGalleryPanel == null) return;
+            
+            centerGalleryPanel.SetActive(true);
+            centerGalleryPanel.transform.SetAsLastSibling(); 
+            
+            if (centerPopupImage != null)
+            {
+                centerPopupImage.texture = tex;
+                AspectRatioFitter fitter = centerPopupImage.GetComponent<AspectRatioFitter>();
+                if (fitter != null && tex != null) fitter.aspectRatio = (float)tex.width / tex.height;
+            }
+            
+            if (centerPopupDetails != null)
+            {
+                centerPopupDetails.text = 
+                    $"<color=#aaffaa><b>Worker Name:</b></color> {gData.worker_name}\n" +
+                    $"<color=#aaffaa><b>Designation:</b></color> {gData.role}\n" +
+                    $"<color=#aaffaa><b>Date:</b></color> {gData.date}\n\n" +
+                    $"<color=#ffcc66><b>Operation Details:</b></color> {gData.work_description}\n" +
+                    $"<color=#ffcc66><b>Procedure Executed:</b></color> {gData.how_it_was_done}\n\n" +
+                    $"<color=#ff7777><b>Cost:</b></color> Rs {gData.cost:N0}";
+            }
         }
     }
 }

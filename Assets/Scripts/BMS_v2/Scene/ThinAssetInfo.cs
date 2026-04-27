@@ -12,10 +12,10 @@ namespace BMS_v2
         public string assetId = "AST_001_03_01_FAN_001";
 
         [Header("Clickable Dot Indicator")]
-        [Tooltip("Size of the floating dot above the asset")]
-        public float dotSize = 0.56f;
-        [Tooltip("How far above the asset's top the dot floats")]
-        public float dotHeightOffset = 0.5f;
+        [Tooltip("Size of the floating dot in the asset center")]
+        public float dotSize = 1.5f;
+        [Tooltip("Vertical offset from the asset's center")]
+        public float dotHeightOffset = 0f;
         [Tooltip("Color of the glowing dot")]
         public Color dotColor = new Color(0f, 0.9f, 1f, 1f); // Cyan glow
         [Tooltip("Pulse speed (how fast it breathes)")]
@@ -114,7 +114,6 @@ namespace BMS_v2
             if (rend != null)
             {
                 topPoint = rend.bounds.center;
-                topPoint.y = rend.bounds.max.y;
             }
             else
             {
@@ -122,7 +121,6 @@ namespace BMS_v2
                 if (col != null)
                 {
                     topPoint = col.bounds.center;
-                    topPoint.y = col.bounds.max.y;
                 }
             }
 

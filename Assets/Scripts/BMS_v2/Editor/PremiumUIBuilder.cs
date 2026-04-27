@@ -16,7 +16,15 @@ namespace BMS_v2.Editor
         [MenuItem("BMS_v2 / 🚀 Generate FINAL Enterprise HUD")]
         public static void GenerateUI()
         {
-            Canvas canvas = Object.FindAnyObjectByType<Canvas>();
+            Canvas canvas = null;
+            Canvas[] allCanvases = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach(var c in allCanvases) {
+                if(c.renderMode == RenderMode.ScreenSpaceOverlay) {
+                    canvas = c;
+                    break;
+                }
+            }
+
             if (canvas == null)
             {
                 GameObject canvasObj = new GameObject("Premium_Canvas");
@@ -998,6 +1006,198 @@ namespace BMS_v2.Editor
             Undo.RegisterCreatedObjectUndo(arrowRoot, "Create 3D Arrow");
             Debug.Log("➤ 3D Arrow created! Move it above your building, adjust scale/bob settings in Inspector.");
         }
+
+        [MenuItem("BMS_v2 / 📊 Generate Building Insight Table")]
+        public static void GenerateInsightTable()
+        {
+            Canvas canvas = null;
+            Canvas[] allCanvases = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach(var c in allCanvases) {
+                if(c.renderMode == RenderMode.ScreenSpaceOverlay) {
+                    canvas = c;
+                    break;
+                }
+            }
+            if (canvas == null) { Debug.LogError("❌ No ScreenSpaceOverlay Canvas found!"); return; }
+
+            // 1. Main Popup Panel (Large & Centered)
+            GameObject insightPopup = CreateSolidPanel("7. Building_Insight_Popup", canvas.transform,
+                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-600, -400), new Vector2(600, 400));
+            Image mainBg = insightPopup.GetComponent<Image>();
+            mainBg.color = new Color(0.08f, 0.1f, 0.15f, 0.98f);
+            
+            // Add a clean blue border
+            GameObject border = new GameObject("Border");
+            border.transform.SetParent(insightPopup.transform, false);
+            RectTransform bRt = border.AddComponent<RectTransform>();
+            bRt.anchorMin = Vector2.zero; bRt.anchorMax = Vector2.one; bRt.sizeDelta = Vector2.zero;
+            border.AddComponent<Outline>().effectColor = new Color(0.2f, 0.6f, 1.0f, 0.3f);
+            border.AddComponent<Outline>().effectDistance = new Vector2(1, 1);
+
+            BuildingInsightManager manager = insightPopup.AddComponent<BuildingInsightManager>();
+            manager.panel = insightPopup;
+
+            // 2. Title Bar Background
+            GameObject titleBar = new GameObject("TitleBar");
+            titleBar.transform.SetParent(insightPopup.transform, false);
+            RectTransform tbRt = titleBar.AddComponent<RectTransform>();
+            tbRt.anchorMin = new Vector2(0, 1); tbRt.anchorMax = new Vector2(1, 1);
+            tbRt.pivot = new Vector2(0.5f, 1); tbRt.offsetMin = new Vector2(0, -65); tbRt.offsetMax = new Vector2(0, 0);
+            Image tbImg = titleBar.AddComponent<Image>();
+            tbImg.color = new Color(0.12f, 0.18f, 0.28f, 1f); // Dedicated title background bar
+
+            TextMeshProUGUI title = CreateText(titleBar.transform, "ENTERPRISE BUILDING ANALYTICS", 26, new Color(0.3f, 0.9f, 1.0f), true);
+            title.alignment = TextAlignmentOptions.Center; 
+            RectTransform tRt = title.GetComponent<RectTransform>();
+            tRt.anchorMin = Vector2.zero; tRt.anchorMax = Vector2.one; tRt.sizeDelta = Vector2.zero;
+
+            // Close Button (Inside Title Bar)
+            GameObject closeBtnObj = new GameObject("CloseButton");
+            closeBtnObj.transform.SetParent(titleBar.transform, false);
+            RectTransform cRt = closeBtnObj.AddComponent<RectTransform>();
+            cRt.anchorMin = new Vector2(1, 0.5f); cRt.anchorMax = new Vector2(1, 0.5f);
+            cRt.sizeDelta = new Vector2(40, 40); cRt.anchoredPosition = new Vector2(-12, 0);
+            Image cImg = closeBtnObj.AddComponent<Image>();
+            cImg.color = new Color(0.85f, 0.2f, 0.2f, 1f);
+            Sprite rnd = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Textures/UI/RoundedCorner.png");
+            if (rnd != null) { cImg.sprite = rnd; cImg.type = Image.Type.Sliced; }
+            Button cBtn = closeBtnObj.AddComponent<Button>();
+            CreateText(closeBtnObj.transform, "✕", 20, Color.white).alignment = TextAlignmentOptions.Center;
+            manager.closeButton = cBtn;
+
+            // 3. Synchronized Table Header Row
+            GameObject tableHeader = new GameObject("TableHeaders");
+            tableHeader.transform.SetParent(insightPopup.transform, false);
+            RectTransform thRt = tableHeader.AddComponent<RectTransform>();
+            thRt.anchorMin = new Vector2(0, 1); thRt.anchorMax = new Vector2(1, 1);
+            thRt.pivot = new Vector2(0.5f, 1); thRt.offsetMin = new Vector2(25, -115); thRt.offsetMax = new Vector2(-25, -75);
+            Image thImg = tableHeader.AddComponent<Image>();
+            thImg.color = new Color(0.18f, 0.28f, 0.4f, 1f);
+            
+            HorizontalLayoutGroup thHlg = tableHeader.AddComponent<HorizontalLayoutGroup>();
+            thHlg.childControlWidth = true; thHlg.childForceExpandWidth = true;
+            thHlg.padding = new RectOffset(15, 15, 0, 0);
+            
+            CreateTableCell(tableHeader.transform, "CATEGORY", 16, Color.yellow, true, 1.5f, TextAlignmentOptions.Left);
+            CreateTableCell(tableHeader.transform, "VALUE", 16, Color.yellow, true, 1.2f, TextAlignmentOptions.Center);
+            CreateTableCell(tableHeader.transform, "STATUS", 16, Color.yellow, true, 1.0f, TextAlignmentOptions.Center);
+            CreateTableCell(tableHeader.transform, "DECISION INSIGHT", 16, Color.yellow, true, 2.5f, TextAlignmentOptions.Left);
+
+            // 4. Scroll Area
+            GameObject scrollObj = new GameObject("Table_Scroll");
+            scrollObj.transform.SetParent(insightPopup.transform, false);
+            RectTransform scRt = scrollObj.AddComponent<RectTransform>();
+            scRt.anchorMin = Vector2.zero; scRt.anchorMax = Vector2.one;
+            scRt.offsetMin = new Vector2(25, 30); scRt.offsetMax = new Vector2(-25, -120);
+            
+            ScrollRect sr = scrollObj.AddComponent<ScrollRect>();
+            sr.horizontal = false; sr.vertical = true;
+            sr.scrollSensitivity = 15; // FIXED: Slower, smoother scroll
+            
+            GameObject viewport = new GameObject("Viewport");
+            viewport.transform.SetParent(scrollObj.transform, false);
+            RectTransform vpRt = viewport.AddComponent<RectTransform>();
+            vpRt.anchorMin = Vector2.zero; vpRt.anchorMax = Vector2.one; vpRt.sizeDelta = Vector2.zero; 
+            
+            // FIXED: Use RectMask2D for strict clipping like Summary Popup
+            viewport.AddComponent<RectMask2D>();
+            sr.viewport = vpRt;
+
+            GameObject content = new GameObject("Content");
+            content.transform.SetParent(viewport.transform, false);
+            RectTransform cntRt = content.AddComponent<RectTransform>();
+            cntRt.anchorMin = new Vector2(0, 1); cntRt.anchorMax = new Vector2(1, 1);
+            cntRt.pivot = new Vector2(0.5f, 1); cntRt.sizeDelta = Vector2.zero;
+            content.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            VerticalLayoutGroup vlg = content.AddComponent<VerticalLayoutGroup>();
+            vlg.childControlWidth = true; vlg.childForceExpandWidth = true; vlg.spacing = 2;
+            sr.content = cntRt;
+
+            // 5. Scrollbar
+            GameObject sbObj = new GameObject("Scrollbar");
+            sbObj.transform.SetParent(scrollObj.transform, false);
+            RectTransform sbRt = sbObj.AddComponent<RectTransform>();
+            sbRt.anchorMin = new Vector2(1, 0); sbRt.anchorMax = new Vector2(1, 1);
+            sbRt.pivot = new Vector2(1, 0.5f); sbRt.sizeDelta = new Vector2(10, 0);
+            sbObj.AddComponent<Image>().color = new Color(1, 1, 1, 0.05f);
+            Scrollbar sb = sbObj.AddComponent<Scrollbar>();
+            sb.direction = Scrollbar.Direction.BottomToTop;
+            GameObject handle = new GameObject("Handle");
+            handle.transform.SetParent(sbObj.transform, false);
+            Image hImg = handle.AddComponent<Image>();
+            hImg.color = new Color(0.2f, 0.7f, 1.0f, 0.7f);
+            if (rnd != null) { hImg.sprite = rnd; hImg.type = Image.Type.Sliced; }
+            sb.handleRect = handle.GetComponent<RectTransform>();
+            sb.handleRect.anchorMin = Vector2.zero; sb.handleRect.anchorMax = Vector2.one; sb.handleRect.sizeDelta = Vector2.zero;
+            sr.verticalScrollbar = sb;
+
+            // 6. Data
+            string[,] data = {
+                {"Overall Health", "MODERATE", "ATTENTION", "Building is stable but requires monitoring"},
+                {"Total Area", "3000 / 5000 sq ft", "MEDIUM", "60% utilized, remaining space can be optimized"},
+                {"Total Investment", "Rs. 12 Cr", "HIGH", "Significant capital already invested"},
+                {"Annual Spend", "Rs. 85 Lakhs", "CONTROLLED", "Spending is within expected range"},
+                {"Budget Usage", "82% Used", "RISK", "Budget nearing limit, control required"},
+                {"Maintenance Load", "24 Issues / Mo", "HIGH", "Frequent problems, possible inefficiency"},
+                {"Pending Issues", "6 Open", "ACTION NEEDED", "Delays in resolution"},
+                {"Avg Resolution", "2.3 Days", "ACCEPTABLE", "Service performance is okay"},
+                {"Electricity Cost", "Rs. 1.8 L / Mo", "HIGH", "Possible energy wastage"},
+                {"Water Usage", "Normal", "STABLE", "No concern"},
+                {"Asset Health", "20 Critical", "CRITICAL", "Immediate repair/replacement required"},
+                {"Future Cost Risk", "Rs. 8 L Expected", "UPCOMING", "Budget planning needed"},
+                {"Space Usage", "65% Occupied", "LOW", "Underutilized building"},
+                {"Unused Capacity", "35% Free", "OPPORTUNITY", "Can optimize instead of new construction"},
+                {"Major Alert", "Lift Overdue", "CRITICAL", "Safety and compliance risk (15 days)"}
+            };
+
+            for (int i = 0; i < data.GetLength(0); i++)
+            {
+                CreateTableRow(content.transform, data[i, 0], data[i, 1], data[i, 2], data[i, 3], (i % 2 == 1));
+            }
+
+            insightPopup.SetActive(false);
+            Selection.activeGameObject = insightPopup;
+            Debug.Log("📊 Premium Building Insight Table Header Fixed!");
+        }
+
+        private static void CreateTableRow(Transform parent, string cat, string val, string status, string insight, bool alternate)
+        {
+            GameObject row = new GameObject("Row_" + cat);
+            row.transform.SetParent(parent, false);
+            Image rowBg = row.AddComponent<Image>();
+            rowBg.color = alternate ? new Color(1, 1, 1, 0.04f) : new Color(0, 0, 0, 0.06f);
+            
+            HorizontalLayoutGroup hlg = row.AddComponent<HorizontalLayoutGroup>();
+            hlg.childControlWidth = true; hlg.childForceExpandWidth = true;
+            hlg.padding = new RectOffset(15, 15, 8, 8);
+            row.AddComponent<LayoutElement>().minHeight = 50;
+
+            CreateTableCell(row.transform, cat, 16, Color.white, true, 1.5f, TextAlignmentOptions.Left);
+            CreateTableCell(row.transform, val, 16, new Color(0.9f, 0.9f, 0.9f), false, 1.2f, TextAlignmentOptions.Center);
+            
+            Color statusColor = Color.white;
+            if (status.Contains("CRITICAL") || status.Contains("RISK")) statusColor = new Color(1f, 0.4f, 0.4f);
+            else if (status.Contains("ATTENTION") || status.Contains("ACTION")) statusColor = new Color(1f, 0.75f, 0.2f);
+            else if (status.Contains("STABLE") || status.Contains("ACCEPTABLE")) statusColor = new Color(0.4f, 1f, 0.5f);
+            
+            CreateTableCell(row.transform, status, 15, statusColor, true, 1.0f, TextAlignmentOptions.Center);
+            CreateTableCell(row.transform, insight, 15, new Color(0.85f, 0.95f, 1.0f), false, 2.5f, TextAlignmentOptions.Left);
+        }
+
+        private static void CreateTableCell(Transform parent, string text, int size, Color color, bool bold, float flexWidth, TextAlignmentOptions align)
+        {
+            GameObject cell = new GameObject("Cell");
+            cell.transform.SetParent(parent, false);
+            LayoutElement le = cell.AddComponent<LayoutElement>();
+            le.flexibleWidth = flexWidth;
+            
+            TextMeshProUGUI t = CreateText(cell.transform, text, size, color, bold);
+            t.alignment = align;
+            t.enableWordWrapping = true;
+        }
+
+        private static void AddVerticalDivider(Transform parent) { } 
+        private static void AddHorizontalDivider(Transform parent) { }
 
         private static Mesh GenerateArrowConeMesh(float height, float radius, int segments)
         {

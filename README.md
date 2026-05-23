@@ -8,7 +8,7 @@ Welcome to the comprehensive technical documentation for **Building Tracker** (D
 > [!IMPORTANT]
 > **100% Solo Engineering Architecture & Implementation**
 >
-> This entire digital twin application—from the initial architectural conceptualization to the final production handover—was designed, developed, and optimized **entirely by a single engineer** for **Snell Cart**. 
+> This entire digital twin application—from the initial architectural conceptualization to the final production handover—was designed, developed, and optimized **entirely by a single engineer, Sunny Rajput,** for **Snell Cart**. 
 >
 > **Every component in this repository is part of a unified solo effort, including:**
 > *   **Full-Stack Architectural Design:** Translating business goals into modular, loosely coupled software subsystems.
@@ -222,6 +222,8 @@ These scripts only execute inside the Unity Editor, providing custom inspectors 
 ---
 
 ### 6. Solo Project Lifecycle & Final Handover Journey
+
+**Lead Solo Engineer:** Sunny Rajput
 
 This project was executed entirely as a single-engineer squad, taking the product from a blank Unity project to a production-grade interactive Digital Twin system. The timeline and lifecycle are structured as follows:
 
